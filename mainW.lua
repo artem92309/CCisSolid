@@ -1,5 +1,5 @@
 --[[ Mayle Hub — single-file universal Luau, executor-agnostic.
-     RightShift or the floating "M" button toggles the menu. ]]
+     RightShift or the floating button toggles the menu. ]]
 
 local Players          = game:GetService("Players")
 local RunService       = game:GetService("RunService")
@@ -43,27 +43,27 @@ local function getRoot() local c = getChar(); return c and c:FindFirstChild("Hum
 
 -- theme ------------------------------------------------------------------
 local T = {
-    bg = Color3.fromRGB(20, 18, 30), panel = Color3.fromRGB(28, 25, 42),
-    row = Color3.fromRGB(38, 34, 56), text = Color3.fromRGB(242, 237, 252),
-    dim = Color3.fromRGB(165, 155, 190), off = Color3.fromRGB(68, 62, 92),
-    accent = Color3.fromRGB(255, 125, 195), accent2 = Color3.fromRGB(150, 120, 255),
+    bg = Color3.fromRGB(18, 18, 20), panel = Color3.fromRGB(24, 24, 27),
+    row = Color3.fromRGB(33, 33, 37), line = Color3.fromRGB(52, 52, 58),
+    text = Color3.fromRGB(232, 232, 236), dim = Color3.fromRGB(150, 150, 158),
+    off = Color3.fromRGB(58, 58, 64), accent = Color3.fromRGB(70, 200, 150),
 }
 local PRESETS = {
-    {"Pink",   Color3.fromRGB(255, 125, 195), Color3.fromRGB(150, 120, 255)},
-    {"Cyan",   Color3.fromRGB(70, 215, 255),  Color3.fromRGB(120, 130, 255)},
-    {"Mint",   Color3.fromRGB(90, 240, 170),  Color3.fromRGB(70, 195, 255)},
-    {"Sunset", Color3.fromRGB(255, 150, 80),  Color3.fromRGB(255, 85, 150)},
-    {"Violet", Color3.fromRGB(185, 125, 255), Color3.fromRGB(105, 140, 255)},
+    {"Green",  Color3.fromRGB(70, 200, 150)},
+    {"Blue",   Color3.fromRGB(80, 150, 255)},
+    {"Red",    Color3.fromRGB(235, 80, 90)},
+    {"Amber",  Color3.fromRGB(240, 175, 55)},
+    {"Violet", Color3.fromRGB(160, 120, 255)},
 }
 local themeHooks = {}
 local function onTheme(fn) themeHooks[#themeHooks + 1] = fn; fn() end
-local function applyTheme(a, b)
-    T.accent, T.accent2 = a, b
+local function applyTheme(c)
+    T.accent = c
     for _, fn in ipairs(themeHooks) do pcall(fn) end
 end
-local function gradHook(g, rot)
-    if rot then g.Rotation = rot end
-    onTheme(function() g.Color = ColorSequence.new(T.accent, T.accent2) end)
+-- text color that stays readable on top of the given background
+local function contrast(c)
+    return (c.R * 0.299 + c.G * 0.587 + c.B * 0.114) > 0.6 and Color3.fromRGB(20, 20, 22) or Color3.new(1, 1, 1)
 end
 
 local function make(class, props, parent)
@@ -72,13 +72,17 @@ local function make(class, props, parent)
     if parent then o.Parent = parent end
     return o
 end
-local function corner(o, r) return make("UICorner", {CornerRadius = UDim.new(0, r or 8)}, o) end
+local function corner(o, r) return make("UICorner", {CornerRadius = UDim.new(0, r or 6)}, o) end
 local function tween(o, t, goal, style)
     local tw = TweenService:Create(o, TweenInfo.new(t, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal)
     tw:Play(); return tw
 end
 local function isPress(i)
     return i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch
+end
+local function copy(text, okMsg, toastFn)
+    if typeof(setclipboard) == "function" then setclipboard(text); toastFn(okMsg)
+    else toastFn("Clipboard not available") end
 end
 
 -- gui root ---------------------------------------------------------------
@@ -134,18 +138,18 @@ local toastHolder = make("Frame", {
     Size = UDim2.fromOffset(240, 0), AutomaticSize = Enum.AutomaticSize.Y, AnchorPoint = Vector2.new(0.5, 0),
     Position = UDim2.new(0.5, 0, 0, 56), BackgroundTransparency = 1, ZIndex = 50,
 }, gui)
-make("UIListLayout", {Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center}, toastHolder)
+make("UIListLayout", {Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center}, toastHolder)
 local function toast(msg)
-    local f = make("Frame", {Size = UDim2.fromOffset(220, 30), BackgroundColor3 = T.panel, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 50}, toastHolder)
-    corner(f, 15)
-    local st = make("UIStroke", {Color = T.accent, Thickness = 1, Transparency = 1}, f)
-    local l = make("TextLabel", {Text = msg, Font = Enum.Font.GothamMedium, TextSize = 13, TextColor3 = T.text,
+    local f = make("Frame", {Size = UDim2.fromOffset(220, 28), BackgroundColor3 = T.panel, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 50}, toastHolder)
+    corner(f, 5)
+    local st = make("UIStroke", {Color = T.line, Thickness = 1, Transparency = 1}, f)
+    local l = make("TextLabel", {Text = msg, Font = Enum.Font.Gotham, TextSize = 13, TextColor3 = T.text,
         TextTransparency = 1, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 51}, f)
-    tween(f, 0.2, {BackgroundTransparency = 0.1}); tween(st, 0.2, {Transparency = 0.3}); tween(l, 0.2, {TextTransparency = 0})
-    task.delay(1.8, function()
+    tween(f, 0.15, {BackgroundTransparency = 0.05}); tween(st, 0.15, {Transparency = 0}); tween(l, 0.15, {TextTransparency = 0})
+    task.delay(1.6, function()
         if not f.Parent then return end
-        tween(f, 0.3, {BackgroundTransparency = 1}); tween(st, 0.3, {Transparency = 1}); tween(l, 0.3, {TextTransparency = 1})
-        task.wait(0.35)
+        tween(f, 0.25, {BackgroundTransparency = 1}); tween(st, 0.25, {Transparency = 1}); tween(l, 0.25, {TextTransparency = 1})
+        task.wait(0.3)
         if f.Parent then f:Destroy() end
     end)
 end
@@ -153,85 +157,92 @@ end
 -- window -----------------------------------------------------------------
 local holder = make("Frame", {Size = UDim2.fromOffset(0, 0), AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1}, gui)
-local main = make("Frame", {Size = UDim2.fromOffset(520, 360), AnchorPoint = Vector2.new(0.5, 0.5),
+local main = make("Frame", {Size = UDim2.fromOffset(540, 370), AnchorPoint = Vector2.new(0.5, 0.5),
     BackgroundColor3 = T.bg, BorderSizePixel = 0, ClipsDescendants = true}, holder)
-corner(main, 14)
+corner(main, 8)
 local uiScale = make("UIScale", {Scale = 0}, main)
-local mainStroke = make("UIStroke", {Thickness = 1.6, Transparency = 0.3}, main)
-gradHook(make("UIGradient", {}, mainStroke), 45)
+make("UIStroke", {Color = T.line, Thickness = 1}, main)
 
 local userScale = 1
 local function baseScale()
     local v = cam() and cam().ViewportSize or vp
-    return math.clamp(math.min(v.X / 560, v.Y / 400, 1), 0.5, 1) * userScale
+    return math.clamp(math.min(v.X / 580, v.Y / 410, 1), 0.5, 1) * userScale
 end
 
-local titleBar = make("Frame", {Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = T.panel, BorderSizePixel = 0}, main)
-local line = make("Frame", {Size = UDim2.new(1, 0, 0, 2), Position = UDim2.new(0, 0, 1, -2), BorderSizePixel = 0,
-    BackgroundColor3 = Color3.new(1, 1, 1)}, titleBar)
-local lineGrad = make("UIGradient", {}, line)
-onTheme(function()
-    lineGrad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, T.accent), ColorSequenceKeypoint.new(0.5, T.accent2), ColorSequenceKeypoint.new(1, T.accent)})
-end)
-local logo = make("TextLabel", {Text = "M", Font = Enum.Font.GothamBlack, TextSize = 16, TextColor3 = Color3.new(1, 1, 1),
-    Size = UDim2.fromOffset(28, 28), Position = UDim2.fromOffset(12, 8), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0}, titleBar)
-corner(logo, 14); gradHook(make("UIGradient", {}, logo), 45)
+local titleBar = make("Frame", {Size = UDim2.new(1, 0, 0, 48), BackgroundColor3 = T.panel, BorderSizePixel = 0}, main)
+local titleLine = make("Frame", {Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, -1), BorderSizePixel = 0}, titleBar)
+onTheme(function() titleLine.BackgroundColor3 = T.accent end)
+
+local logo = make("Frame", {Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(12, 9), BorderSizePixel = 0}, titleBar)
+corner(logo, 6)
+local logoText = make("TextLabel", {Text = "M", Font = Enum.Font.GothamBlack, TextSize = 17, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1)}, logo)
+onTheme(function() logo.BackgroundColor3 = T.accent; logoText.TextColor3 = contrast(T.accent) end)
+
 make("TextLabel", {Text = "Mayle Hub", Font = Enum.Font.GothamBold, TextSize = 16, TextColor3 = T.text, BackgroundTransparency = 1,
-    Size = UDim2.fromOffset(160, 20), Position = UDim2.fromOffset(48, 6), TextXAlignment = Enum.TextXAlignment.Left}, titleBar)
-make("TextLabel", {Text = "universal  ·  mobile ready", Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = T.dim, BackgroundTransparency = 1,
-    Size = UDim2.fromOffset(180, 14), Position = UDim2.fromOffset(48, 25), TextXAlignment = Enum.TextXAlignment.Left}, titleBar)
+    Size = UDim2.fromOffset(200, 20), Position = UDim2.fromOffset(52, 6), TextXAlignment = Enum.TextXAlignment.Left}, titleBar)
+local subtitle = make("TextLabel", {Text = "@" .. LP.Name, Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = T.dim, BackgroundTransparency = 1,
+    Size = UDim2.new(1, -170, 0, 14), Position = UDim2.fromOffset(52, 27), TextXAlignment = Enum.TextXAlignment.Left,
+    TextTruncate = Enum.TextTruncate.AtEnd}, titleBar)
 
 local function titleBtn(txt, xoff, color)
-    local b = make("TextButton", {Text = txt, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = T.text,
+    local b = make("TextButton", {Text = txt, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Color3.new(1, 1, 1),
         Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, xoff, 0.5, -14), BackgroundColor3 = color,
         AutoButtonColor = false, BorderSizePixel = 0}, titleBar)
-    corner(b, 9)
-    track(b.MouseEnter:Connect(function() tween(b, 0.12, {BackgroundTransparency = 0.25}) end))
-    track(b.MouseLeave:Connect(function() tween(b, 0.12, {BackgroundTransparency = 0}) end))
+    corner(b, 5)
+    track(b.MouseEnter:Connect(function() tween(b, 0.1, {BackgroundTransparency = 0.25}) end))
+    track(b.MouseLeave:Connect(function() tween(b, 0.1, {BackgroundTransparency = 0}) end))
     return b
 end
-local btnHide  = titleBtn("-", -72, T.row)
-local btnClose = titleBtn("x", -38, Color3.fromRGB(205, 70, 110))
+local btnHide  = titleBtn("-", -72, Color3.fromRGB(70, 70, 78))
+local btnClose = titleBtn("x", -38, Color3.fromRGB(190, 60, 70))
 draggable(titleBar, holder, {})
 
 -- sidebar + pages --------------------------------------------------------
-local sidebar = make("Frame", {Size = UDim2.new(0, 128, 1, -44), Position = UDim2.fromOffset(0, 44), BackgroundColor3 = T.panel, BorderSizePixel = 0}, main)
-local tabList = make("Frame", {Size = UDim2.new(1, 0, 1, -30), BackgroundTransparency = 1}, sidebar)
-make("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder}, tabList)
-make("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}, tabList)
-make("TextLabel", {Text = "RShift  ·  menu", Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = T.dim, BackgroundTransparency = 1,
+local sidebar = make("Frame", {Size = UDim2.new(0, 120, 1, -48), Position = UDim2.fromOffset(0, 48), BackgroundColor3 = T.panel, BorderSizePixel = 0}, main)
+make("Frame", {Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0), BackgroundColor3 = T.line, BorderSizePixel = 0}, sidebar)
+local tabList = make("Frame", {Size = UDim2.new(1, 0, 1, -28), BackgroundTransparency = 1}, sidebar)
+make("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder}, tabList)
+make("UIPadding", {PaddingTop = UDim.new(0, 8)}, tabList)
+make("TextLabel", {Text = "RShift: toggle menu", Font = Enum.Font.Gotham, TextSize = 10, TextColor3 = T.dim, BackgroundTransparency = 1,
     Size = UDim2.new(1, 0, 0, 24), Position = UDim2.new(0, 0, 1, -26)}, sidebar)
-local content = make("Frame", {Size = UDim2.new(1, -128, 1, -44), Position = UDim2.fromOffset(128, 44), BackgroundTransparency = 1, ClipsDescendants = true}, main)
+local content = make("Frame", {Size = UDim2.new(1, -120, 1, -48), Position = UDim2.fromOffset(120, 48), BackgroundTransparency = 1, ClipsDescendants = true}, main)
 
-local pages, tabButtons, currentTab, orders = {}, {}, nil, {}
+local pages, tabs, currentTab, orders = {}, {}, nil, {}
 local function ord(page) orders[page] = (orders[page] or 0) + 1; return orders[page] end
 
+local function paintTabs()
+    for n, t in pairs(tabs) do
+        local on = (n == currentTab)
+        tween(t.btn, 0.15, {BackgroundColor3 = on and T.row or T.panel, TextColor3 = on and T.text or T.dim})
+        t.bar.BackgroundColor3 = T.accent
+        t.bar.Visible = on
+    end
+end
 local function selectTab(name)
     currentTab = name
     for n, p in pairs(pages) do
         if n == name then
-            p.Visible = true; p.Position = UDim2.fromOffset(0, 12)
-            tween(p, 0.22, {Position = UDim2.fromOffset(0, 0)})
+            p.Visible = true; p.Position = UDim2.fromOffset(0, 10)
+            tween(p, 0.2, {Position = UDim2.fromOffset(0, 0)})
         else p.Visible = false end
     end
-    for n, b in pairs(tabButtons) do
-        local on = (n == name)
-        tween(b, 0.18, {BackgroundColor3 = on and T.accent or T.row, TextColor3 = on and Color3.new(1, 1, 1) or T.dim})
-    end
+    paintTabs()
 end
-onTheme(function() if currentTab then selectTab(currentTab) end end)
+onTheme(paintTabs)
 
-local function addTab(name, icon, order)
+local function addTab(name, order)
     local page = make("ScrollingFrame", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
         ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Visible = false}, content)
     onTheme(function() page.ScrollBarImageColor3 = T.accent end)
-    make("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder}, page)
-    make("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12)}, page)
+    make("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder}, page)
+    make("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12)}, page)
     pages[name] = page
-    local b = make("TextButton", {Text = icon .. "  " .. name, Font = Enum.Font.GothamMedium, TextSize = 13, TextColor3 = T.dim,
-        Size = UDim2.new(1, 0, 0, 34), BackgroundColor3 = T.row, AutoButtonColor = false, BorderSizePixel = 0, LayoutOrder = order}, tabList)
-    corner(b, 9)
-    tabButtons[name] = b
+    local b = make("TextButton", {Text = name, Font = Enum.Font.GothamMedium, TextSize = 13, TextColor3 = T.dim,
+        TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, 0, 0, 32), BackgroundColor3 = T.panel,
+        AutoButtonColor = false, BorderSizePixel = 0, LayoutOrder = order}, tabList)
+    make("UIPadding", {PaddingLeft = UDim.new(0, 16)}, b)
+    local bar = make("Frame", {Size = UDim2.new(0, 3, 1, -10), Position = UDim2.fromOffset(-16, 5), BorderSizePixel = 0, Visible = false}, b)
+    tabs[name] = {btn = b, bar = bar}
     track(b.MouseButton1Click:Connect(function() selectTab(name) end))
     return page
 end
@@ -248,28 +259,32 @@ end
 
 -- components -------------------------------------------------------------
 local function addSection(page, text)
+    local f = make("Frame", {Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, LayoutOrder = ord(page)}, page)
     make("TextLabel", {Text = string.upper(text), Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = T.dim,
-        BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = ord(page)}, page)
+        BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(2, 2), TextXAlignment = Enum.TextXAlignment.Left}, f)
+    make("Frame", {Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, -1), BackgroundColor3 = T.line, BorderSizePixel = 0}, f)
 end
 
 local function addToggle(page, label, default, cb, noBadge)
-    local row = make("Frame", {Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = T.row, BorderSizePixel = 0, LayoutOrder = ord(page)}, page)
-    corner(row, 9)
-    make("TextLabel", {Text = label, Font = Enum.Font.GothamMedium, TextSize = 14, TextColor3 = T.text, BackgroundTransparency = 1,
-        Size = UDim2.new(1, -72, 1, 0), Position = UDim2.fromOffset(12, 0), TextXAlignment = Enum.TextXAlignment.Left}, row)
-    local pill = make("Frame", {Size = UDim2.fromOffset(44, 22), Position = UDim2.new(1, -56, 0.5, -11), BackgroundColor3 = T.off, BorderSizePixel = 0}, row)
-    corner(pill, 11)
-    local knob = make("Frame", {Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(2, 2), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0}, pill)
-    corner(knob, 9)
+    local row = make("Frame", {Size = UDim2.new(1, 0, 0, 34), BackgroundColor3 = T.row, BorderSizePixel = 0, LayoutOrder = ord(page)}, page)
+    corner(row, 6)
+    make("TextLabel", {Text = label, Font = Enum.Font.Gotham, TextSize = 14, TextColor3 = T.text, BackgroundTransparency = 1,
+        Size = UDim2.new(1, -52, 1, 0), Position = UDim2.fromOffset(12, 0), TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd}, row)
+    local box = make("Frame", {Size = UDim2.fromOffset(20, 20), Position = UDim2.new(1, -32, 0.5, -10), BackgroundColor3 = T.off, BorderSizePixel = 0}, row)
+    corner(box, 4)
+    local mark = make("Frame", {Size = UDim2.fromOffset(8, 8), Position = UDim2.fromOffset(6, 6), BackgroundTransparency = 1, BorderSizePixel = 0}, box)
+    corner(mark, 2)
     local state = false
     local function visual()
-        tween(pill, 0.18, {BackgroundColor3 = state and T.accent or T.off})
-        tween(knob, 0.18, {Position = state and UDim2.fromOffset(24, 2) or UDim2.fromOffset(2, 2)})
+        tween(box, 0.15, {BackgroundColor3 = state and T.accent or T.off})
+        mark.BackgroundColor3 = contrast(T.accent)
+        tween(mark, 0.15, {BackgroundTransparency = state and 0 or 1})
     end
     local function set(v, silent)
         state = v; visual()
         if not noBadge then toggleState[label] = v; refreshBadge() end
-        if not silent then toast(label .. (v and "  on" or "  off")); task.spawn(cb, v) end
+        if not silent then toast(label .. (v and ": on" or ": off")); task.spawn(cb, v) end
     end
     onTheme(visual)
     local hit = make("TextButton", {Text = "", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0)}, row)
@@ -279,18 +294,19 @@ local function addToggle(page, label, default, cb, noBadge)
     return set
 end
 
-local function addSlider(page, label, min, max, default, step, cb, onDragState)
-    local row = make("Frame", {Size = UDim2.new(1, 0, 0, 52), BackgroundColor3 = T.row, BorderSizePixel = 0, LayoutOrder = ord(page)}, page)
-    corner(row, 9)
-    make("TextLabel", {Text = label, Font = Enum.Font.GothamMedium, TextSize = 14, TextColor3 = T.text, BackgroundTransparency = 1,
-        Size = UDim2.new(1, -80, 0, 22), Position = UDim2.fromOffset(12, 5), TextXAlignment = Enum.TextXAlignment.Left}, row)
+local function addSlider(page, label, min, max, default, step, cb)
+    local row = make("Frame", {Size = UDim2.new(1, 0, 0, 48), BackgroundColor3 = T.row, BorderSizePixel = 0, LayoutOrder = ord(page)}, page)
+    corner(row, 6)
+    make("TextLabel", {Text = label, Font = Enum.Font.Gotham, TextSize = 14, TextColor3 = T.text, BackgroundTransparency = 1,
+        Size = UDim2.new(1, -80, 0, 22), Position = UDim2.fromOffset(12, 4), TextXAlignment = Enum.TextXAlignment.Left}, row)
     local val = make("TextLabel", {Text = tostring(default), Font = Enum.Font.GothamBold, TextSize = 14, BackgroundTransparency = 1,
-        Size = UDim2.fromOffset(60, 22), Position = UDim2.new(1, -72, 0, 5), TextXAlignment = Enum.TextXAlignment.Right}, row)
+        Size = UDim2.fromOffset(60, 22), Position = UDim2.new(1, -72, 0, 4), TextXAlignment = Enum.TextXAlignment.Right}, row)
     onTheme(function() val.TextColor3 = T.accent end)
-    local bar = make("Frame", {Size = UDim2.new(1, -24, 0, 8), Position = UDim2.new(0, 12, 0, 36), BackgroundColor3 = T.off, BorderSizePixel = 0}, row)
-    corner(bar, 4)
-    local fill = make("Frame", {Size = UDim2.new((default - min) / (max - min), 0, 1, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0}, bar)
-    corner(fill, 4); gradHook(make("UIGradient", {}, fill))
+    local bar = make("Frame", {Size = UDim2.new(1, -24, 0, 6), Position = UDim2.new(0, 12, 0, 34), BackgroundColor3 = T.off, BorderSizePixel = 0}, row)
+    corner(bar, 3)
+    local fill = make("Frame", {Size = UDim2.new((default - min) / (max - min), 0, 1, 0), BorderSizePixel = 0}, bar)
+    corner(fill, 3)
+    onTheme(function() fill.BackgroundColor3 = T.accent end)
     local dragging = false
     local function update(x)
         local a = math.clamp((x - bar.AbsolutePosition.X) / math.max(bar.AbsoluteSize.X, 1), 0, 1)
@@ -310,89 +326,97 @@ local function addSlider(page, label, min, max, default, step, cb, onDragState)
     cb(default)
 end
 
+-- button: colored frame behind, text on its own transparent button (text is never tinted)
 local function addButton(page, label, cb)
-    local b = make("TextButton", {Text = label, Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.new(1, 1, 1),
-        Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, BorderSizePixel = 0, LayoutOrder = ord(page)}, page)
-    corner(b, 9); gradHook(make("UIGradient", {}, b))
-    track(b.MouseEnter:Connect(function() tween(b, 0.12, {BackgroundTransparency = 0.15}) end))
-    track(b.MouseLeave:Connect(function() tween(b, 0.12, {BackgroundTransparency = 0}) end))
+    local bg = make("Frame", {Size = UDim2.new(1, 0, 0, 34), BorderSizePixel = 0, LayoutOrder = ord(page)}, page)
+    corner(bg, 6)
+    local b = make("TextButton", {Text = label, Font = Enum.Font.GothamBold, TextSize = 14, BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1), AutoButtonColor = false}, bg)
+    onTheme(function() bg.BackgroundColor3 = T.accent; b.TextColor3 = contrast(T.accent) end)
+    track(b.MouseEnter:Connect(function() tween(bg, 0.1, {BackgroundTransparency = 0.18}) end))
+    track(b.MouseLeave:Connect(function() tween(bg, 0.1, {BackgroundTransparency = 0}) end))
     track(b.MouseButton1Click:Connect(function()
-        tween(b, 0.07, {Size = UDim2.new(1, -8, 0, 34)}).Completed:Connect(function() tween(b, 0.1, {Size = UDim2.new(1, 0, 0, 38)}) end)
+        tween(bg, 0.06, {Size = UDim2.new(1, -6, 0, 31)}).Completed:Connect(function() tween(bg, 0.08, {Size = UDim2.new(1, 0, 0, 34)}) end)
         task.spawn(cb)
     end))
 end
 
 local function addSwatches(page, label, cb)
-    local row = make("Frame", {Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = T.row, BorderSizePixel = 0, LayoutOrder = ord(page)}, page)
-    corner(row, 9)
-    make("TextLabel", {Text = label, Font = Enum.Font.GothamMedium, TextSize = 14, TextColor3 = T.text, BackgroundTransparency = 1,
+    local row = make("Frame", {Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = T.row, BorderSizePixel = 0, LayoutOrder = ord(page)}, page)
+    corner(row, 6)
+    make("TextLabel", {Text = label, Font = Enum.Font.Gotham, TextSize = 14, TextColor3 = T.text, BackgroundTransparency = 1,
         Size = UDim2.new(0, 70, 1, 0), Position = UDim2.fromOffset(12, 0), TextXAlignment = Enum.TextXAlignment.Left}, row)
     local box = make("Frame", {Size = UDim2.new(1, -90, 1, 0), Position = UDim2.fromOffset(84, 0), BackgroundTransparency = 1}, row)
     make("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
         VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6)}, box)
     for _, p in ipairs(PRESETS) do
-        local s = make("TextButton", {Text = "", Size = UDim2.fromOffset(26, 26), BackgroundColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, BorderSizePixel = 0}, box)
-        corner(s, 13)
-        make("UIGradient", {Color = ColorSequence.new(p[2], p[3]), Rotation = 45}, s)
-        track(s.MouseButton1Click:Connect(function() cb(p[2], p[3]); toast("Accent: " .. p[1]) end))
+        local s = make("TextButton", {Text = "", Size = UDim2.fromOffset(24, 24), BackgroundColor3 = p[2], AutoButtonColor = false, BorderSizePixel = 0}, box)
+        corner(s, 5)
+        track(s.MouseButton1Click:Connect(function() cb(p[2]); toast("Accent: " .. p[1]) end))
     end
 end
 
-local playerPickerRefresh
-local function addPlayerPicker(page)
-    local wrap = make("Frame", {Size = UDim2.new(1, 0, 0, 38), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = T.row, BorderSizePixel = 0, LayoutOrder = ord(page)}, page)
-    corner(wrap, 9)
-    make("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder}, wrap)
-    local head = make("TextButton", {Text = "", Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1, LayoutOrder = 1}, wrap)
-    local lab = make("TextLabel", {Text = "Target: none", Font = Enum.Font.GothamMedium, TextSize = 14, TextColor3 = T.text, BackgroundTransparency = 1,
-        Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(12, 0), TextXAlignment = Enum.TextXAlignment.Left}, head)
-    make("TextLabel", {Text = "v", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = T.dim, BackgroundTransparency = 1,
-        Size = UDim2.fromOffset(24, 38), Position = UDim2.new(1, -30, 0, 0)}, head)
-    local list = make("ScrollingFrame", {Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, LayoutOrder = 2,
-        CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 3}, wrap)
-    make("UIListLayout", {Padding = UDim.new(0, 3)}, list)
-    make("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 6)}, list)
-    local open = false
-    local function rebuild()
-        for _, c in ipairs(list:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
-        local others = {}
-        for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then others[#others + 1] = p end end
-        for _, p in ipairs(others) do
-            local b = make("TextButton", {Text = p.DisplayName .. "  (@" .. p.Name .. ")", Font = Enum.Font.Gotham, TextSize = 13, TextColor3 = T.text,
-                Size = UDim2.new(1, 0, 0, 28), BackgroundColor3 = T.panel, AutoButtonColor = false, BorderSizePixel = 0}, list)
-            corner(b, 7)
-            track(b.MouseButton1Click:Connect(function()
-                S.target = p; lab.Text = "Target: " .. p.Name; open = false; list.Visible = false
-            end))
-        end
-        list.Size = UDim2.new(1, 0, 0, math.max(math.min(#others, 4) * 31 + 6, 6))
-        if S.target and not S.target.Parent then S.target = nil; lab.Text = "Target: none" end
+-- info card: optional avatar header + key/value rows; returns label refs
+local function addCard(page, withHeader, keys)
+    local card = make("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = T.row,
+        BorderSizePixel = 0, LayoutOrder = ord(page)}, page)
+    corner(card, 6)
+    make("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder}, card)
+    make("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)}, card)
+    local refs = {}
+    if withHeader then
+        local head = make("Frame", {Size = UDim2.new(1, 0, 0, 58), BackgroundTransparency = 1, LayoutOrder = 0}, card)
+        refs.thumb = make("ImageLabel", {Size = UDim2.fromOffset(54, 54), BackgroundColor3 = T.panel, BorderSizePixel = 0, Image = ""}, head)
+        corner(refs.thumb, 6)
+        refs.name = make("TextLabel", {Text = "-", Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = T.text, BackgroundTransparency = 1,
+            Size = UDim2.new(1, -64, 0, 22), Position = UDim2.fromOffset(64, 6), TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd}, head)
+        refs.sub = make("TextLabel", {Text = "", Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = T.dim, BackgroundTransparency = 1,
+            Size = UDim2.new(1, -64, 0, 18), Position = UDim2.fromOffset(64, 28), TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd}, head)
     end
-    track(head.MouseButton1Click:Connect(function() open = not open; list.Visible = open; rebuild() end))
-    playerPickerRefresh = rebuild
-    rebuild()
+    for idx, k in ipairs(keys) do
+        local r = make("Frame", {Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, LayoutOrder = idx}, card)
+        make("TextLabel", {Text = k, Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = T.dim, BackgroundTransparency = 1,
+            Size = UDim2.new(0, 96, 1, 0), TextXAlignment = Enum.TextXAlignment.Left}, r)
+        refs[k] = make("TextLabel", {Text = "-", Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = T.text, BackgroundTransparency = 1,
+            Size = UDim2.new(1, -100, 1, 0), Position = UDim2.fromOffset(100, 0), TextXAlignment = Enum.TextXAlignment.Right,
+            TextTruncate = Enum.TextTruncate.AtEnd}, r)
+    end
+    return refs
+end
+
+local function loadThumb(label, userId, stillWanted)
+    task.spawn(function()
+        local ok, img = pcall(Players.GetUserThumbnailAsync, Players, userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+        if ok and label.Parent and stillWanted() then label.Image = img end
+    end)
 end
 
 -- pages ------------------------------------------------------------------
-local pMove = addTab("Movement", "🏃", 1)
-local pVis  = addTab("Visuals", "👁", 2)
-local pPl   = addTab("Players", "👥", 3)
-local pMisc = addTab("Misc", "🧰", 4)
-local pSet  = addTab("Settings", "⚙", 5)
+local pMove = addTab("Movement", 1)
+local pVis  = addTab("Visuals", 2)
+local pPl   = addTab("Players", 3)
+local pMisc = addTab("Misc", 4)
+local pSet  = addTab("Settings", 5)
 
 -- floating button --------------------------------------------------------
-local fab = make("Frame", {Size = UDim2.fromOffset(52, 52), Position = UDim2.fromOffset(12, math.floor(vp.Y / 2) - 26), BackgroundTransparency = 1, ZIndex = 20}, gui)
-local glow = make("Frame", {Size = UDim2.fromOffset(52, 52), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, ZIndex = 19}, fab)
-corner(glow, 26)
-local glowScale = make("UIScale", {}, glow)
-local ringStroke = make("UIStroke", {Thickness = 2.5, Transparency = 0.15}, glow)
-local ringGrad = make("UIGradient", {}, ringStroke); gradHook(ringGrad)
-local core = make("TextButton", {Text = "M", Font = Enum.Font.GothamBlack, TextSize = 20, TextColor3 = Color3.new(1, 1, 1),
-    Size = UDim2.fromOffset(42, 42), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-    BackgroundColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 21}, fab)
-corner(core, 21); gradHook(make("UIGradient", {}, core), 45)
-make("UIStroke", {Color = Color3.new(1, 1, 1), Thickness = 1.2, Transparency = 0.55}, core)
-badge = make("Frame", {Size = UDim2.fromOffset(20, 20), Position = UDim2.new(1, -14, 0, -6), BackgroundColor3 = T.bg, BorderSizePixel = 0, ZIndex = 23, Visible = false}, fab)
+local fab = make("Frame", {Size = UDim2.fromOffset(54, 54), Position = UDim2.fromOffset(12, math.floor(vp.Y / 2) - 27), BackgroundTransparency = 1, ZIndex = 20}, gui)
+local ring = make("Frame", {Size = UDim2.fromOffset(54, 54), BackgroundTransparency = 1, ZIndex = 19}, fab)
+corner(ring, 27)
+local ringStroke = make("UIStroke", {Thickness = 2, Transparency = 0.3}, ring)
+onTheme(function() ringStroke.Color = T.accent end)
+local core = make("Frame", {Size = UDim2.fromOffset(44, 44), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+    BorderSizePixel = 0, ZIndex = 21}, fab)
+corner(core, 22)
+local coreBtn = make("TextButton", {Text = "M", Font = Enum.Font.GothamBlack, TextSize = 20, BackgroundTransparency = 1,
+    Size = UDim2.fromScale(1, 1), AutoButtonColor = false, ZIndex = 22}, core)
+local spark = make("TextLabel", {Text = "✦", Font = Enum.Font.GothamBold, TextSize = 13, BackgroundTransparency = 1,
+    Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -9, 0, 9), ZIndex = 25, Active = false}, fab)
+onTheme(function()
+    core.BackgroundColor3 = T.accent; coreBtn.TextColor3 = contrast(T.accent); spark.TextColor3 = T.accent
+end)
+badge = make("Frame", {Size = UDim2.fromOffset(20, 20), Position = UDim2.new(0, -4, 1, -16), BackgroundColor3 = T.bg, BorderSizePixel = 0, ZIndex = 23, Visible = false}, fab)
 corner(badge, 10)
 local badgeStroke = make("UIStroke", {Thickness = 1.5}, badge)
 onTheme(function() badgeStroke.Color = T.accent end)
@@ -403,16 +427,16 @@ local open = false
 local function setOpen(v)
     open = v
     main.Visible = true
-    local tw = tween(uiScale, 0.3, {Scale = v and baseScale() or 0}, v and Enum.EasingStyle.Back or Enum.EasingStyle.Quad)
+    local tw = tween(uiScale, 0.28, {Scale = v and baseScale() or 0}, v and Enum.EasingStyle.Back or Enum.EasingStyle.Quad)
     if not v then tw.Completed:Connect(function() if not open then main.Visible = false end end) end
 end
-draggable(core, fab, {clamp = true,
+draggable(coreBtn, fab, {clamp = true,
     onClick = function() setOpen(not open) end,
     onDrop = function()
         local v = cam() and cam().ViewportSize or vp
         local cx = fab.AbsolutePosition.X + fab.AbsoluteSize.X / 2
         local x = (cx < v.X / 2) and 8 or (v.X - fab.AbsoluteSize.X - 8)
-        tween(fab, 0.3, {Position = UDim2.fromOffset(x, fab.AbsolutePosition.Y)}, Enum.EasingStyle.Back)
+        tween(fab, 0.28, {Position = UDim2.fromOffset(x, fab.AbsolutePosition.Y)}, Enum.EasingStyle.Back)
     end})
 track(btnHide.MouseButton1Click:Connect(function() setOpen(false) end))
 track(UIS.InputBegan:Connect(function(i, gp)
@@ -427,10 +451,15 @@ for _, d in ipairs({{-9, -1, 7, 2}, {2, -1, 7, 2}, {-1, -9, 2, 7}, {-1, 2, 2, 7}
 end
 onTheme(function() for _, p in ipairs(crossParts) do p.BackgroundColor3 = T.accent end end)
 
-local hud = make("TextLabel", {Text = "", Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = T.text, BackgroundColor3 = T.panel, BackgroundTransparency = 0.2,
+local hud = make("TextLabel", {Text = "", Font = Enum.Font.GothamMedium, TextSize = 13, TextColor3 = T.text, BackgroundColor3 = T.panel, BackgroundTransparency = 0.15,
     Size = UDim2.fromOffset(130, 24), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), BorderSizePixel = 0, Visible = false}, gui)
-corner(hud, 12)
+corner(hud, 5)
 local fpsAvg, hudAcc = 60, 0
+local function getPing()
+    local ping = 0
+    pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
+    return ping
+end
 
 -- features: movement -----------------------------------------------------
 local orig = {}
@@ -491,12 +520,14 @@ local function stopFly()
 end
 
 local pad = make("Frame", {Size = UDim2.fromOffset(60, 178), Position = UDim2.fromOffset(math.floor(vp.X - 84), math.floor(vp.Y - 250)), BackgroundTransparency = 1, Visible = false, ZIndex = 20}, gui)
+local padButtons = {}
 local function padBtn(txt, y, h)
-    local b = make("TextButton", {Text = txt, Font = Enum.Font.GothamBold, TextSize = 16, TextColor3 = T.text, Size = UDim2.fromOffset(60, h),
-        Position = UDim2.fromOffset(0, y), BackgroundColor3 = T.panel, BackgroundTransparency = 0.1, AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 21}, pad)
-    corner(b, 14)
-    local st = make("UIStroke", {Thickness = 1.5, Transparency = 0.2}, b)
+    local b = make("TextButton", {Text = txt, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = T.text, Size = UDim2.fromOffset(60, h),
+        Position = UDim2.fromOffset(0, y), BackgroundColor3 = T.panel, BackgroundTransparency = 0.05, AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 21}, pad)
+    corner(b, 8)
+    local st = make("UIStroke", {Thickness = 1.5}, b)
     onTheme(function() st.Color = T.accent end)
+    padButtons[#padButtons + 1] = b
     return b
 end
 local btnUp   = padBtn("UP", 0, 52)
@@ -514,7 +545,7 @@ local function refreshPad()
     pad.Visible = S.flyPad
     btnUp.Visible, btnDown.Visible = S.fly, S.fly
     btnFly.BackgroundColor3 = S.fly and T.accent or T.panel
-    btnFly.TextColor3 = S.fly and Color3.new(1, 1, 1) or T.text
+    btnFly.TextColor3 = S.fly and contrast(T.accent) or T.text
 end
 onTheme(refreshPad)
 draggable(btnFly, pad, {clamp = true, onClick = function() if flyToggleSet then flyToggleSet(not S.fly) end end})
@@ -583,6 +614,7 @@ end))
 
 -- ESP --------------------------------------------------------------------
 local esp = {}
+local playerPickerRefresh
 local function removeEsp(plr)
     local e = esp[plr]
     if e then
@@ -688,16 +720,14 @@ track(RunService.RenderStepped:Connect(function(dt)
     elseif origZoom then LP.CameraMaxZoomDistance = origZoom[1]; LP.CameraMinZoomDistance = origZoom[2]; origZoom = nil end
     if S.spectate then
         local th = S.target and S.target.Character and S.target.Character:FindFirstChildOfClass("Humanoid")
-        if th then if c.CameraSubject ~= th then c.CameraSubject = th end end
+        if th and c.CameraSubject ~= th then c.CameraSubject = th end
     end
     cross.Visible = S.crosshair
     fpsAvg = fpsAvg + ((1 / math.max(dt, 1e-3)) - fpsAvg) * 0.05
     hudAcc += dt
     if S.hud and hudAcc > 0.4 then
         hudAcc = 0
-        local ping = 0
-        pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-        hud.Text = string.format("%d FPS  ·  %d ms", math.floor(fpsAvg + 0.5), ping)
+        hud.Text = string.format("%d FPS  |  %d ms", math.floor(fpsAvg + 0.5), getPing())
     end
     hud.Visible = S.hud
 end))
@@ -708,8 +738,8 @@ track(LP.Idled:Connect(function()
     pcall(function() VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end)
 end))
 
--- menu content -----------------------------------------------------------
-addSection(pMove, "Speed & jump")
+-- menu content: movement -------------------------------------------------
+addSection(pMove, "Speed and jump")
 addToggle(pMove, "Speed hack", false, function(v) S.speed = v end)
 addSlider(pMove, "Walk speed", 16, 200, 50, 1, function(v) S.speedValue = v end)
 addToggle(pMove, "Jump power", false, function(v) S.jump = v end)
@@ -722,12 +752,13 @@ addToggle(pMove, "Steer with camera (look to climb)", true, function(v) S.flySte
 addToggle(pMove, "On-screen fly pad", TOUCH, function(v) S.flyPad = v; refreshPad() end, true)
 addSection(pMove, "World")
 addToggle(pMove, "Noclip", false, function(v) S.noclip = v end)
-addToggle(pMove, "Low gravity / custom gravity", false, function(v) S.gravity = v end)
+addToggle(pMove, "Custom gravity", false, function(v) S.gravity = v end)
 addSlider(pMove, "Gravity", 0, 196, 60, 2, function(v) S.gravityValue = v end)
 addToggle(pMove, "Click / tap teleport (Ctrl+click on PC)", false, function(v) S.clickTp = v end)
 addToggle(pMove, "Spin", false, function(v) S.spin = v end)
 addSlider(pMove, "Spin speed", 1, 30, 8, 1, function(v) S.spinSpeed = v end)
 
+-- menu content: visuals --------------------------------------------------
 addSection(pVis, "Players")
 addToggle(pVis, "Player ESP", false, function(v) S.esp = v; rebuildEsp() end)
 addToggle(pVis, "ESP names + distance", true, function(v) S.espNames = v end, true)
@@ -744,8 +775,66 @@ addSlider(pVis, "FOV", 40, 120, 90, 1, function(v) S.fov = v end)
 addToggle(pVis, "Unlock zoom distance", false, function(v) S.zoom = v end)
 addToggle(pVis, "Crosshair", false, function(v) S.crosshair = v end)
 
+-- menu content: players --------------------------------------------------
+addSection(pPl, "You and server")
+local meCard = addCard(pPl, true, {"User ID", "Account age", "Server players", "Ping", "FPS", "Place ID", "Job ID", "Position"})
+meCard.name.Text = LP.DisplayName
+meCard.sub.Text = "@" .. LP.Name .. "  (you)"
+meCard["User ID"].Text = tostring(LP.UserId)
+meCard["Account age"].Text = LP.AccountAge .. " days"
+meCard["Place ID"].Text = tostring(game.PlaceId)
+meCard["Job ID"].Text = (game.JobId ~= "" and string.sub(game.JobId, 1, 8) .. "...") or "studio"
+loadThumb(meCard.thumb, LP.UserId, function() return true end)
+
 addSection(pPl, "Target")
+local pickerLabel
+local tgtCard
+local function setTarget(p)
+    S.target = p
+    if pickerLabel then pickerLabel.Text = p and ("Target: " .. p.Name) or "Target: none" end
+    if tgtCard then
+        tgtCard.thumb.Image = ""
+        if p then loadThumb(tgtCard.thumb, p.UserId, function() return S.target == p end) end
+    end
+    if not p then S.spectate = false end
+end
+
+local function addPlayerPicker(page)
+    local wrap = make("Frame", {Size = UDim2.new(1, 0, 0, 34), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = T.row, BorderSizePixel = 0, LayoutOrder = ord(page)}, page)
+    corner(wrap, 6)
+    make("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder}, wrap)
+    local head = make("TextButton", {Text = "", Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = 1}, wrap)
+    pickerLabel = make("TextLabel", {Text = "Target: none", Font = Enum.Font.Gotham, TextSize = 14, TextColor3 = T.text, BackgroundTransparency = 1,
+        Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(12, 0), TextXAlignment = Enum.TextXAlignment.Left}, head)
+    make("TextLabel", {Text = "v", Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = T.dim, BackgroundTransparency = 1,
+        Size = UDim2.fromOffset(24, 34), Position = UDim2.new(1, -30, 0, 0)}, head)
+    local list = make("ScrollingFrame", {Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, LayoutOrder = 2,
+        CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 3}, wrap)
+    make("UIListLayout", {Padding = UDim.new(0, 3)}, list)
+    make("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 6)}, list)
+    local isOpen = false
+    local function rebuild()
+        for _, c in ipairs(list:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+        local others = {}
+        for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then others[#others + 1] = p end end
+        for _, p in ipairs(others) do
+            local b = make("TextButton", {Text = p.DisplayName .. "  (@" .. p.Name .. ")", Font = Enum.Font.Gotham, TextSize = 13, TextColor3 = T.text,
+                Size = UDim2.new(1, 0, 0, 28), BackgroundColor3 = T.panel, AutoButtonColor = false, BorderSizePixel = 0}, list)
+            corner(b, 5)
+            track(b.MouseButton1Click:Connect(function() setTarget(p); isOpen = false; list.Visible = false end))
+        end
+        list.Size = UDim2.new(1, 0, 0, math.max(math.min(#others, 4) * 31 + 6, 6))
+        if S.target and not S.target.Parent then setTarget(nil) end
+    end
+    track(head.MouseButton1Click:Connect(function() isOpen = not isOpen; list.Visible = isOpen; rebuild() end))
+    playerPickerRefresh = rebuild
+    rebuild()
+end
 addPlayerPicker(pPl)
+
+tgtCard = addCard(pPl, true, {"User ID", "Account age", "Team", "Status", "Health", "Walk speed", "Distance", "Position", "Holding"})
+tgtCard.name.Text = "No target selected"
+
 addButton(pPl, "Teleport to target", function()
     local root = getRoot()
     local tr = S.target and S.target.Character and S.target.Character:FindFirstChild("HumanoidRootPart")
@@ -759,17 +848,67 @@ addToggle(pPl, "Spectate target", false, function(v)
         local c, hum = cam(), getHum()
         if c and hum then c.CameraSubject = hum end
     end
+end, true)
+addButton(pPl, "Copy target username", function()
+    if S.target then copy(S.target.Name, "Username copied", toast) else toast("Pick a target first") end
+end)
+addButton(pPl, "Copy target user ID", function()
+    if S.target then copy(tostring(S.target.UserId), "User ID copied", toast) else toast("Pick a target first") end
 end)
 
+-- live info refresh (cards + subtitle) ----------------------------------
+local function fmtPos(p) return string.format("%.0f, %.0f, %.0f", p.X, p.Y, p.Z) end
+local infoAcc = 0
+track(RunService.Heartbeat:Connect(function(dt)
+    infoAcc += dt
+    if infoAcc < 0.3 then return end
+    infoAcc = 0
+    local count = #Players:GetPlayers()
+    local ping = getPing()
+    subtitle.Text = string.format("@%s  |  %d/%d players  |  %d ms  |  %d fps", LP.Name, count, Players.MaxPlayers, ping, math.floor(fpsAvg + 0.5))
+    if open and currentTab == "Players" then
+        meCard["Server players"].Text = count .. " / " .. Players.MaxPlayers
+        meCard["Ping"].Text = ping .. " ms"
+        meCard["FPS"].Text = tostring(math.floor(fpsAvg + 0.5))
+        local r = getRoot()
+        meCard["Position"].Text = r and fmtPos(r.Position) or "-"
+        local t = S.target
+        if t and t.Parent then
+            tgtCard.name.Text = t.DisplayName
+            tgtCard.sub.Text = "@" .. t.Name
+            tgtCard["User ID"].Text = tostring(t.UserId)
+            tgtCard["Account age"].Text = t.AccountAge .. " days"
+            tgtCard["Team"].Text = t.Team and t.Team.Name or "none"
+            local ch = t.Character
+            local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+            local root = ch and ch:FindFirstChild("HumanoidRootPart")
+            if hum and root then
+                tgtCard["Status"].Text = hum.Health > 0 and "Alive" or "Dead"
+                tgtCard["Health"].Text = math.floor(hum.Health) .. " / " .. math.floor(hum.MaxHealth)
+                tgtCard["Walk speed"].Text = string.format("%.0f", hum.WalkSpeed)
+                tgtCard["Position"].Text = fmtPos(root.Position)
+                tgtCard["Distance"].Text = r and (math.floor((r.Position - root.Position).Magnitude) .. " studs") or "-"
+                local tool = ch:FindFirstChildOfClass("Tool")
+                tgtCard["Holding"].Text = tool and tool.Name or "nothing"
+            else
+                tgtCard["Status"].Text = "No character"
+                for _, k in ipairs({"Health", "Walk speed", "Distance", "Position", "Holding"}) do tgtCard[k].Text = "-" end
+            end
+        else
+            tgtCard.name.Text = "No target selected"
+            tgtCard.sub.Text = ""
+            for _, k in ipairs({"User ID", "Account age", "Team", "Status", "Health", "Walk speed", "Distance", "Position", "Holding"}) do tgtCard[k].Text = "-" end
+        end
+    end
+end))
+
+-- menu content: misc / settings -----------------------------------------
 addSection(pMisc, "Utility")
 addToggle(pMisc, "Anti-AFK", true, function(v) S.antiAfk = v end, true)
 addToggle(pMisc, "FPS / ping overlay", false, function(v) S.hud = v end)
 addButton(pMisc, "Copy position", function()
     local r = getRoot()
-    if r and typeof(setclipboard) == "function" then
-        local p = r.Position
-        setclipboard(string.format("%.2f, %.2f, %.2f", p.X, p.Y, p.Z)); toast("Position copied")
-    else toast("Clipboard not available") end
+    if r then local p = r.Position; copy(string.format("%.2f, %.2f, %.2f", p.X, p.Y, p.Z), "Position copied", toast) end
 end)
 addButton(pMisc, "Reset character", function() local h = getHum(); if h then h.Health = 0 end end)
 addButton(pMisc, "Rejoin server", function()
@@ -804,12 +943,11 @@ end
 track(btnClose.MouseButton1Click:Connect(unload))
 env.__MayleUnload = unload
 
--- idle animation: ring spin, glow pulse, title shimmer ------------------
+-- idle animation: ring pulse + spark spin --------------------------------
 track(RunService.RenderStepped:Connect(function()
     local t = os.clock()
-    ringGrad.Rotation = (t * 90) % 360
-    glowScale.Scale = 1 + 0.07 * math.sin(t * 3) + (open and 0 or 0.03)
-    lineGrad.Offset = Vector2.new(math.sin(t * 1.5) * 0.5, 0)
+    ringStroke.Transparency = 0.45 + 0.3 * math.sin(t * 2.4)
+    spark.Rotation = (t * 40) % 360
 end))
 
 setOpen(true)
